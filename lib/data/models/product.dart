@@ -1,0 +1,79 @@
+import 'package:equatable/equatable.dart';
+
+class Product extends Equatable {
+  final String id;
+  final String businessId;
+  final String productName;
+  final String? description;
+  final String? category;
+  final double price;
+  final String? sku;
+  final String? unit;
+  final int? quantity;
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  const Product({
+    required this.id,
+    required this.businessId,
+    required this.productName,
+    this.description,
+    this.category,
+    required this.price,
+    this.sku,
+    this.unit,
+    this.quantity,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory Product.fromJson(Map<String, dynamic> json) {
+    return Product(
+      id: json['id'],
+      businessId: json['business_id'],
+      productName: json['product_name'],
+      description: json['description'],
+      category: json['category'],
+      price: (json['price'] as num).toDouble(),
+      sku: json['sku'],
+      unit: json['unit'],
+      quantity: json['quantity'],
+      status: json['status'] ?? 'ACTIVE',
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'business_id': businessId,
+    'product_name': productName,
+    'description': description,
+    'category': category,
+    'price': price,
+    'sku': sku,
+    'unit': unit,
+    'quantity': quantity,
+    'status': status,
+    'created_at': createdAt.toIso8601String(),
+    'updated_at': updatedAt.toIso8601String(),
+  };
+
+  @override
+  List<Object?> get props => [
+    id,
+    businessId,
+    productName,
+    description,
+    category,
+    price,
+    sku,
+    unit,
+    quantity,
+    status,
+    createdAt,
+    updatedAt,
+  ];
+}

@@ -43,3 +43,26 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Security and sensitive files
+.env
+.env.*
+secrets.json
+secrets.yml
+*.jks
+*.keystore
+*.p12
+*.pem
+key.properties
+
+# Platform specific sensitive files
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+
+# Flutter specific
+.flutter-plugins
+.flutter-plugins-dependencies
+.dart_tool/
+build/
