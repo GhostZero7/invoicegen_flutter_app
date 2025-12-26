@@ -46,10 +46,10 @@ class ApiService {
     required String password,
   }) async {
     try {
-      print('🔐 Calling: ${ApiEndpoints.baseUrl}/auth/auth/login');
+      print('🔐 Calling: ${ApiEndpoints.baseUrl}/auth/login');
 
       final response = await _dio.post(
-        '/auth/auth/login', // ← CORRECT PATH
+        '/auth/login', // ← CORRECT PATH
         data: {'email': email, 'password': password},
       );
 
@@ -134,6 +134,36 @@ class ApiService {
     throw Exception('Failed to get user via GraphQL');
   }
 
+  // ✅ Request Email Verification
+  Future<void> requestVerification(String email) async {
+    try {
+      print('📧 Requesting verification for: $email');
+      final response = await _dio.post(
+        '/auth/request-verification',
+        data: {'email': email},
+      );
+      print('✅ Verification request success: ${response.data}');
+    } catch (e) {
+      print('❌ Request verification error: $e');
+      throw Exception('Failed to send verification code');
+    }
+  }
+
+  // ✅ Verify Email with OTP
+  Future<void> verifyEmail(String email, String otp) async {
+    try {
+      print('🔢 Verifying OTP for: $email');
+      final response = await _dio.post(
+        '/auth/verify-email',
+        data: {'email': email, 'otp': otp},
+      );
+      print('✅ OTP verified: ${response.data}');
+    } catch (e) {
+      print('❌ Verify OTP error: $e');
+      throw Exception('Invalid verification code');
+    }
+  }
+
   // ✅ Register user
   Future<Map<String, dynamic>> register({
     required String email,
@@ -143,10 +173,10 @@ class ApiService {
     String? phone,
   }) async {
     try {
-      print('📝 Calling: ${ApiEndpoints.baseUrl}/auth/auth/register');
+      print('📝 Calling: ${ApiEndpoints.baseUrl}/auth/register');
 
       final response = await _dio.post(
-        '/auth/auth/register', // ← CORRECT PATH
+        '/auth/register', // ← CORRECT PATH
         data: {
           'email': email,
           'password': password,
@@ -394,6 +424,30 @@ class ApiService {
     } catch (e) {
       print('❌ createProduct error: $e');
       throw Exception('Create product endpoint not implemented');
+    }
+  }
+
+  // ✅ Payment methods
+  Future<Map<String, dynamic>> recordPayment(Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.post('/api/v1/payments/', data: data);
+      return response.data;
+    } catch (e) {
+      print('❌ recordPayment error: $e');
+      throw Exception('Record payment failed: $e');
+    }
+  }
+
+  Future<List<dynamic>> getPayments({String? invoiceId}) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/payments/',
+        queryParameters: {if (invoiceId != null) 'invoice_id': invoiceId},
+      );
+      return response.data;
+    } catch (e) {
+      print('❌ getPayments error: $e');
+      throw Exception('Get payments failed: $e');
     }
   }
 }

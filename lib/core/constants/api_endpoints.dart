@@ -4,24 +4,24 @@ class ApiEndpoints {
   static const String baseUrl = 'http://10.148.32.81:8000';
   // For real device (use your computer's IP):
   // static const String baseUrl = 'http://192.168.x.x:8000'; // Your computer IP
-  
+
   // For iOS simulator:
   // static const String baseUrl = 'http://localhost:8000';
 
   // ✅ CORRECT ENDPOINTS (from your screenshot):
   // Auth endpoints - Note the double /auth/auth/
-  static const String register = '/auth/auth/register';
-  static const String login = '/auth/auth/login';
-  
+  static const String register = '/auth/register';
+  static const String login = '/auth/login';
+
   // Invoice endpoint
   static const String createInvoice = '/invoices/invoices/';
-  
+
   // GraphQL endpoint (definitely exists)
   static const String graphql = '/graphql';
-  
+
   // Health check (exists)
   static const String health = '/health';
-  
+
   // Root endpoint (exists)
   static const String root = '/';
   /*

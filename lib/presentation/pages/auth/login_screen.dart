@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:invoicegen_flutter_app/presentation/bloc/auth/auth_bloc.dart';
 import 'package:invoicegen_flutter_app/presentation/bloc/auth/auth_event.dart';
 import 'package:invoicegen_flutter_app/presentation/bloc/auth/auth_state.dart';
-import 'package:invoicegen_flutter_app/core/network/connection_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:invoicegen_flutter_app/presentation/riverpod/onboarding_provider.dart';
 import 'package:invoicegen_flutter_app/injection_container.dart';
+import 'package:invoicegen_flutter_app/core/network/connection_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -284,9 +286,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   TextButton(
                     onPressed: () {
-                      // Navigate to register screen
+                      // Navigate back to onboarding and reset state
+                      // We use Consumer here because LoginScreen is not a ConsumerWidget
                     },
-                    child: const Text('Don\'t have an account? Register'),
+                    child: Consumer(
+                      builder: (context, ref, child) {
+                        return GestureDetector(
+                          onTap: () {
+                            ref
+                                .read(onboardingProvider.notifier)
+                                .resetOnboarding();
+                            Navigator.of(
+                              context,
+                            ).pushNamedAndRemoveUntil('/', (route) => false);
+                          },
+                          child: const Text('Don\'t have an account? Register'),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
