@@ -5,6 +5,9 @@ import 'package:invoicegen_flutter_app/presentation/bloc/auth/auth_bloc.dart';
 import 'package:invoicegen_flutter_app/presentation/bloc/auth/auth_event.dart';
 import 'package:invoicegen_flutter_app/presentation/bloc/auth/auth_state.dart';
 
+import 'package:invoicegen_flutter_app/presentation/pages/invoices/invoice_list_screen.dart';
+import 'package:invoicegen_flutter_app/presentation/pages/invoices/create_invoice_screen.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -15,10 +18,10 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
 
-  // Tab screens (you'll create these)
+  // Tab screens
   final List<Widget> _screens = [
     const HomeTab(),
-    const InvoicesTab(),
+    const InvoiceListScreen(),
     const ClientsTab(),
     const ProfileTab(),
   ];
@@ -26,19 +29,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('InvoiceGen Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              context.read<AuthBloc>().add(const LogoutEvent());
-            },
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
-      body: _screens[_selectedIndex],
+      // AppBar removed to avoid clutter/duplication with child screens
+      body: SafeArea(child: _screens[_selectedIndex]),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
@@ -48,22 +40,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt),
-            label: 'Invoices',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: 'Clients',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.receipt), label: 'Invoices'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Clients'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
@@ -91,7 +71,12 @@ class HomeTab extends StatelessWidget {
           const SizedBox(height: 30),
           ElevatedButton(
             onPressed: () {
-              // Navigate to create invoice
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateInvoiceScreen(),
+                ),
+              );
             },
             child: const Text('Create Invoice'),
           ),
@@ -101,21 +86,15 @@ class HomeTab extends StatelessWidget {
   }
 }
 
-class InvoicesTab extends StatelessWidget {
-  const InvoicesTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Invoices Tab'));
-  }
-}
-
 class ClientsTab extends StatelessWidget {
   const ClientsTab({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Clients Tab'));
+    return Scaffold(
+      appBar: AppBar(title: const Text('Clients')),
+      body: const Center(child: Text('Clients Tab')),
+    );
   }
 }
 
@@ -124,38 +103,41 @@ class ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          if (state is AuthAuthenticated) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  child: Text(
-                    state.user.firstName.substring(0, 1).toUpperCase(),
-                    style: const TextStyle(fontSize: 40),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Profile')),
+      body: Center(
+        child: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is AuthAuthenticated) {
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    child: Text(
+                      state.user.firstName.substring(0, 1).toUpperCase(),
+                      style: const TextStyle(fontSize: 40),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  '${state.user.firstName} ${state.user.lastName}',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                Text(state.user.email),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    context.read<AuthBloc>().add(const LogoutEvent());
-                  },
-                  child: const Text('Logout'),
-                ),
-              ],
-            );
-          }
-          return const CircularProgressIndicator();
-        },
+                  const SizedBox(height: 20),
+                  Text(
+                    '${state.user.firstName} ${state.user.lastName}',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  Text(state.user.email),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<AuthBloc>().add(const LogoutEvent());
+                    },
+                    child: const Text('Logout'),
+                  ),
+                ],
+              );
+            }
+            return const CircularProgressIndicator();
+          },
+        ),
       ),
     );
   }

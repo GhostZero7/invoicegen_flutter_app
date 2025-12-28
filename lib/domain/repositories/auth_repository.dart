@@ -9,10 +9,11 @@ abstract class AuthRepository {
     String? phone,
   });
 
-  Future<User> login({
-    required String email,
-    required String password,
-  });
+  Future<User> login({required String email, required String password});
+
+  Future<void> requestVerification(String email);
+
+  Future<void> verifyEmail(String email, String otp);
 
   Future<void> logout();
 

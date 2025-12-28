@@ -31,19 +31,33 @@ class Client extends Equatable {
   });
 
   factory Client.fromJson(Map<String, dynamic> json) {
+    final companyName = json['company_name'] as String?;
+    final firstName = json['first_name'] as String?;
+    final lastName = json['last_name'] as String?;
+
+    // Synthesize client name if not provided
+    final synthesizedName =
+        companyName ?? '${firstName ?? ''} ${lastName ?? ''}'.trim();
+
     return Client(
-      id: json['id'],
-      businessId: json['business_id'],
-      clientName: json['client_name'],
+      id: json['id'] ?? '',
+      businessId: json['business_id'] ?? '',
+      clientName: json['client_name'] ?? synthesizedName,
       email: json['email'],
       phone: json['phone'],
       website: json['website'],
-      address: json['address'] != null ? Address.fromJson(json['address']) : null,
-      taxNumber: json['tax_number'],
+      address: json['address'] != null
+          ? Address.fromJson(json['address'])
+          : null,
+      taxNumber: json['tax_number'] ?? json['tax_id'],
       notes: json['notes'],
       status: json['status'] ?? 'ACTIVE',
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: DateTime.parse(
+        json['created_at'] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: DateTime.parse(
+        json['updated_at'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 

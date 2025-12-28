@@ -1,23 +1,26 @@
 import 'package:invoicegen_flutter_app/data/datasources/remote/api_service.dart';
+import 'package:invoicegen_flutter_app/data/models/client.dart';
 
 class ClientRepository {
   final ApiService _apiService;
 
   ClientRepository(this._apiService);
 
-  Future<List<dynamic>> getClients({String? businessId}) async {
+  Future<List<Client>> getClients({String? businessId}) async {
     try {
-      final result = await _apiService.getClients(businessId: businessId);
-      return result;
+      final List<dynamic> result = await _apiService.getClients(
+        businessId: businessId,
+      );
+      return result.map((json) => Client.fromJson(json)).toList();
     } catch (e) {
       rethrow;
     }
   }
 
-  Future<Map<String, dynamic>> createClient(Map<String, dynamic> data) async {
+  Future<Client> createClient(Map<String, dynamic> data) async {
     try {
       final result = await _apiService.createClient(data);
-      return result;
+      return Client.fromJson(result);
     } catch (e) {
       rethrow;
     }

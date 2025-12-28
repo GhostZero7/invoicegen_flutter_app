@@ -14,7 +14,7 @@ class Invoice extends Equatable {
   final String currency;
   final String status;
   final String? notes;
-  final String? terms;
+  final String? paymentTerms;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -32,29 +32,37 @@ class Invoice extends Equatable {
     required this.currency,
     required this.status,
     this.notes,
-    this.terms,
+    this.paymentTerms,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory Invoice.fromJson(Map<String, dynamic> json) {
     return Invoice(
-      id: json['id'],
-      businessId: json['business_id'],
-      clientId: json['client_id'],
-      invoiceNumber: json['invoice_number'],
-      invoiceDate: DateTime.parse(json['invoice_date']),
-      dueDate: DateTime.parse(json['due_date']),
-      subtotal: (json['subtotal'] as num).toDouble(),
-      taxAmount: (json['tax_amount'] as num).toDouble(),
-      discountAmount: (json['discount_amount'] as num).toDouble(),
-      totalAmount: (json['total_amount'] as num).toDouble(),
+      id: json['id'] ?? '',
+      businessId: json['business_id'] ?? '',
+      clientId: json['client_id'] ?? '',
+      invoiceNumber: json['invoice_number'] ?? '',
+      invoiceDate: DateTime.parse(
+        json['invoice_date'] ?? DateTime.now().toIso8601String(),
+      ),
+      dueDate: DateTime.parse(
+        json['due_date'] ?? DateTime.now().toIso8601String(),
+      ),
+      subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
+      taxAmount: (json['tax_amount'] as num?)?.toDouble() ?? 0.0,
+      discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0.0,
+      totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0.0,
       currency: json['currency'] ?? 'USD',
       status: json['status'] ?? 'DRAFT',
       notes: json['notes'],
-      terms: json['terms'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      paymentTerms: json['payment_terms'],
+      createdAt: DateTime.parse(
+        json['created_at'] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: DateTime.parse(
+        json['updated_at'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 
@@ -72,7 +80,7 @@ class Invoice extends Equatable {
     'currency': currency,
     'status': status,
     'notes': notes,
-    'terms': terms,
+    'payment_terms': paymentTerms,
     'created_at': createdAt.toIso8601String(),
     'updated_at': updatedAt.toIso8601String(),
   };
@@ -92,7 +100,7 @@ class Invoice extends Equatable {
     currency,
     status,
     notes,
-    terms,
+    paymentTerms,
     createdAt,
     updatedAt,
   ];

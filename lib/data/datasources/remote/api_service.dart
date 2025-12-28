@@ -1,13 +1,16 @@
 // lib/data/datasources/remote/api_service.dart
 import 'package:dio/dio.dart';
+import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:invoicegen_flutter_app/core/constants/api_endpoints.dart';
+import 'package:invoicegen_flutter_app/data/datasources/remote/graphql_queries.dart';
 
 class ApiService {
   final Dio _dio;
   final SharedPreferences _prefs;
+  final GraphQLClient _gqlClient;
 
-  ApiService(this._prefs) : _dio = Dio() {
+  ApiService(this._prefs, this._gqlClient) : _dio = Dio() {
     _setupDio();
   }
 
@@ -84,7 +87,7 @@ class ApiService {
 
       // Option 1: Try REST first
       try {
-        final response = await _dio.get('/api/v1/users/me');
+        final response = await _dio.get('/users/me');
         print('✅ User via REST: ${response.data}');
         return response.data;
       } catch (restError) {
@@ -101,37 +104,25 @@ class ApiService {
 
   // GraphQL version for getting user
   Future<Map<String, dynamic>> getCurrentUserViaGraphQL() async {
-    const query = '''
-      query {
-        me {
-          id
-          email
-          first_name: firstName
-          last_name: lastName
-          phone
-          role
-          status
-          created_at: createdAt
-          updated_at: updatedAt
-        }
-      }
-    ''';
+    final result = await _gqlClient.query(
+      QueryOptions(
+        document: gql(GraphQLQueries.me),
+        fetchPolicy: FetchPolicy.networkOnly,
+      ),
+    );
 
-    final response = await _dio.post('/graphql', data: {'query': query});
+    if (result.hasException) {
+      print('❌ GraphQL Error (me): ${result.exception}');
+      throw Exception(result.exception.toString());
+    }
 
-    // Handle null response (user not logged in)
-    if (response.data?['data']?['me'] == null) {
+    final data = result.data?['me'];
+    if (data == null) {
       print('ℹ️ No user logged in (me query returned null)');
       throw Exception('Not authenticated');
     }
 
-    if (response.data?['data']?['me'] != null) {
-      return response.data!['data']['me'];
-    } else if (response.data?['errors'] != null) {
-      throw Exception(response.data!['errors'][0]['message']);
-    }
-
-    throw Exception('Failed to get user via GraphQL');
+    return data;
   }
 
   // ✅ Request Email Verification
@@ -209,17 +200,93 @@ class ApiService {
   // ✅ Create invoice
   Future<Map<String, dynamic>> createInvoice(Map<String, dynamic> data) async {
     try {
-      print('🧾 Calling: ${ApiEndpoints.baseUrl}/invoices/invoices/');
-
-      final response = await _dio.post(
-        '/invoices/invoices/', // ← CORRECT PATH
-        data: data,
+      final result = await _gqlClient.mutate(
+        MutationOptions(
+          document: gql(GraphQLQueries.createInvoice),
+          variables: {'input': data},
+        ),
       );
 
-      print('✅ Invoice created: ${response.data}');
+      if (result.hasException) {
+        throw Exception(result.exception.toString());
+      }
+
+      return result.data?['createInvoice'] ?? {};
+    } catch (e) {
+      print('❌ Create invoice (GraphQL) error: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ Get invoices
+  Future<Map<String, dynamic>> getInvoices({
+    String? status,
+    int skip = 0,
+    int limit = 20,
+  }) async {
+    try {
+      final result = await _gqlClient.query(
+        QueryOptions(
+          document: gql(GraphQLQueries.getInvoices),
+          variables: {
+            'status': status?.toLowerCase(),
+            'skip': skip,
+            'limit': limit,
+          },
+        ),
+      );
+
+      if (result.hasException) {
+        throw Exception(result.exception.toString());
+      }
+
+      final List<dynamic> invoices = result.data?['invoices'] ?? [];
+
+      return {
+        'invoices': invoices,
+        'total': invoices
+            .length, // GraphQL query doesn't currently return total count in this simple version
+        'page': (skip ~/ limit) + 1,
+        'page_size': limit,
+        'total_pages': 1, // Placeholder
+      };
+    } catch (e) {
+      print('❌ Get invoices (GraphQL) error: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ Get invoice details
+  Future<Map<String, dynamic>> getInvoiceDetails(String id) async {
+    try {
+      final response = await _dio.get('/invoices/$id');
       return response.data;
     } catch (e) {
-      print('❌ Create invoice error: $e');
+      print('❌ Get invoice details error: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ Update invoice
+  Future<Map<String, dynamic>> updateInvoice(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _dio.patch('/invoices/$id', data: data);
+      return response.data;
+    } catch (e) {
+      print('❌ Update invoice error: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ Delete invoice
+  Future<void> deleteInvoice(String id) async {
+    try {
+      await _dio.delete('/invoices/$id');
+    } catch (e) {
+      print('❌ Delete invoice error: $e');
       rethrow;
     }
   }
@@ -331,7 +398,7 @@ class ApiService {
   // ✅ Business methods (stub implementations)
   Future<List<dynamic>> getBusinessProfiles() async {
     try {
-      final response = await _dio.get('/api/v1/business');
+      final response = await _dio.get('/business');
       return response.data;
     } catch (e) {
       print('❌ getBusinessProfiles error: $e');
@@ -343,7 +410,7 @@ class ApiService {
     Map<String, dynamic> data,
   ) async {
     try {
-      final response = await _dio.post('/api/v1/business', data: data);
+      final response = await _dio.post('/business', data: data);
       return response.data;
     } catch (e) {
       print('❌ createBusinessProfile error: $e');
@@ -351,86 +418,94 @@ class ApiService {
     }
   }
 
-  // ✅ Invoice methods
-  Future<List<dynamic>> getInvoices({
-    String? businessId,
-    String? status,
-    int skip = 0,
-    int limit = 20,
-  }) async {
-    try {
-      final response = await _dio.get(
-        '/invoices/invoices/',
-        queryParameters: {
-          if (businessId != null) 'business_id': businessId,
-          if (status != null) 'status': status,
-          'skip': skip,
-          'limit': limit,
-        },
-      );
-      return response.data;
-    } catch (e) {
-      print('❌ getInvoices error: $e');
-      throw Exception('Get invoices failed: $e');
-    }
-  }
-
   // ✅ Client methods
   Future<List<dynamic>> getClients({String? businessId}) async {
     try {
-      final response = await _dio.get(
-        '/api/v1/clients',
-        queryParameters: businessId != null
-            ? {'business_id': businessId}
-            : null,
+      final result = await _gqlClient.query(
+        QueryOptions(
+          document: gql(GraphQLQueries.getClients),
+          variables: {if (businessId != null) 'businessId': businessId},
+        ),
       );
-      return response.data;
+
+      if (result.hasException) {
+        throw Exception(result.exception.toString());
+      }
+
+      return result.data?['clients'] ?? [];
     } catch (e) {
-      print('❌ getClients error: $e');
-      throw Exception('Get clients endpoint not implemented');
+      print('❌ getClients (GraphQL) error: $e');
+      rethrow;
     }
   }
 
   Future<Map<String, dynamic>> createClient(Map<String, dynamic> data) async {
     try {
-      final response = await _dio.post('/api/v1/clients', data: data);
-      return response.data;
+      final result = await _gqlClient.mutate(
+        MutationOptions(
+          document: gql(GraphQLQueries.createClient),
+          variables: {'input': data},
+        ),
+      );
+
+      if (result.hasException) {
+        throw Exception(result.exception.toString());
+      }
+
+      return result.data?['createClient'] ?? {};
     } catch (e) {
-      print('❌ createClient error: $e');
-      throw Exception('Create client endpoint not implemented');
+      print('❌ createClient (GraphQL) error: $e');
+      rethrow;
     }
   }
 
   // ✅ Product methods
   Future<List<dynamic>> getProducts({String? businessId}) async {
     try {
-      final response = await _dio.get(
-        '/api/v1/products',
-        queryParameters: businessId != null
-            ? {'business_id': businessId}
-            : null,
+      final result = await _gqlClient.query(
+        QueryOptions(
+          document: gql(GraphQLQueries.getProducts),
+          variables: {
+            'filter': {if (businessId != null) 'businessId': businessId},
+          },
+        ),
       );
-      return response.data;
+
+      if (result.hasException) {
+        throw Exception(result.exception.toString());
+      }
+
+      return result.data?['products'] ?? [];
     } catch (e) {
-      print('❌ getProducts error: $e');
-      throw Exception('Get products endpoint not implemented');
+      print('❌ getProducts (GraphQL) error: $e');
+      rethrow;
     }
   }
 
   Future<Map<String, dynamic>> createProduct(Map<String, dynamic> data) async {
     try {
-      final response = await _dio.post('/api/v1/products', data: data);
-      return response.data;
+      final result = await _gqlClient.mutate(
+        MutationOptions(
+          document: gql(GraphQLQueries.createProduct),
+          variables: {'input': data},
+        ),
+      );
+
+      if (result.hasException) {
+        throw Exception(result.exception.toString());
+      }
+
+      return result.data?['createProduct'] ?? {};
     } catch (e) {
-      print('❌ createProduct error: $e');
-      throw Exception('Create product endpoint not implemented');
+      print('❌ createProduct (GraphQL) error: $e');
+      rethrow;
     }
   }
 
   // ✅ Payment methods
   Future<Map<String, dynamic>> recordPayment(Map<String, dynamic> data) async {
     try {
-      final response = await _dio.post('/api/v1/payments/', data: data);
+      final response = await _dio.post('/payments/', data: data);
       return response.data;
     } catch (e) {
       print('❌ recordPayment error: $e');
@@ -441,7 +516,7 @@ class ApiService {
   Future<List<dynamic>> getPayments({String? invoiceId}) async {
     try {
       final response = await _dio.get(
-        '/api/v1/payments/',
+        '/payments/',
         queryParameters: {if (invoiceId != null) 'invoice_id': invoiceId},
       );
       return response.data;

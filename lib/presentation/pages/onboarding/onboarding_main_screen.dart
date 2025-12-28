@@ -65,9 +65,16 @@ class _OnboardingMainScreenState extends ConsumerState<OnboardingMainScreen> {
           errorMessage = 'Failed to send verification code. Please try again.';
         }
       }
-    } else if (currentPage == 3 && !onboardingState.isOtpStepValid) {
-      errorMessage =
-          'Please enter the 6-digit verification code sent to your email.';
+    } else if (currentPage == 3) {
+      if (!onboardingState.isOtpStepValid) {
+        errorMessage =
+            'Please enter the 6-digit verification code sent to your email.';
+      } else {
+        final success = await onboardingNotifier.verifyOtp();
+        if (!success) {
+          errorMessage = 'Invalid verification code. Please try again.';
+        }
+      }
     }
 
     if (errorMessage != null) {
@@ -114,6 +121,23 @@ class _OnboardingMainScreenState extends ConsumerState<OnboardingMainScreen> {
                 ],
               ),
             ),
+
+            if (onboardingState.currentPage < _totalSteps - 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: TextButton(
+                  onPressed: () {
+                    ref.read(onboardingProvider.notifier).completeOnboarding();
+                  },
+                  child: Text(
+                    'Skip Onboarding',
+                    style: TextStyle(
+                      color: theme.colorScheme.primary.withOpacity(0.6),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
 
             // Bottom Navigation Area
             Padding(

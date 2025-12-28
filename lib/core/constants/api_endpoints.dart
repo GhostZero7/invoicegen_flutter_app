@@ -1,7 +1,7 @@
 class ApiEndpoints {
   // Use emulator IP for testing (Android)
-  //static const String baseUrl = 'http://10.0.2.2:8000'; // Android emulator
-  static const String baseUrl = 'http://10.148.32.81:8000';
+  //static const String baseUrl = 'http://10.0.2.2:8080'; // Android emulator
+  static const String baseUrl = 'http://10.12.209.81:8080';
   // For real device (use your computer's IP):
   // static const String baseUrl = 'http://192.168.x.x:8000'; // Your computer IP
 
@@ -14,7 +14,7 @@ class ApiEndpoints {
   static const String login = '/auth/login';
 
   // Invoice endpoint
-  static const String createInvoice = '/invoices/invoices/';
+  static const String createInvoice = '/invoices/';
 
   // GraphQL endpoint (definitely exists)
   static const String graphql = '/graphql';

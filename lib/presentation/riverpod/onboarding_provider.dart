@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:invoicegen_flutter_app/data/datasources/remote/api_service.dart';
-import 'package:get_it/get_it.dart';
+import 'package:invoicegen_flutter_app/injection_container.dart';
 
 class OnboardingState {
   final int currentPage;
@@ -71,8 +72,14 @@ class OnboardingState {
 
 class OnboardingNotifier extends StateNotifier<OnboardingState> {
   final ApiService _apiService;
+  final SharedPreferences _prefs;
 
-  OnboardingNotifier(this._apiService) : super(const OnboardingState());
+  OnboardingNotifier(this._apiService, this._prefs)
+    : super(
+        OnboardingState(
+          isCompleted: _prefs.getBool('onboarding_completed') ?? false,
+        ),
+      );
 
   void setPage(int page) {
     state = state.copyWith(currentPage: page);
@@ -129,16 +136,41 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     state = state.copyWith(currency: currency, invoiceName: invoiceName);
   }
 
+  Future<bool> register() async {
+    try {
+      final names = state.businessName.split(' ');
+      final firstName = names.isNotEmpty ? names[0] : 'User';
+      final lastName = names.length > 1 ? names.sublist(1).join(' ') : '.';
+
+      await _apiService.register(
+        email: state.email,
+        password: state.password,
+        firstName: firstName,
+        lastName: lastName,
+        phone: state.phone,
+      );
+      return true;
+    } catch (e) {
+      print('Failed to register user: $e');
+      return false;
+    }
+  }
+
   void completeOnboarding() {
+    _prefs.setBool('onboarding_completed', true);
     state = state.copyWith(isCompleted: true);
   }
 
   void resetOnboarding() {
+    _prefs.remove('onboarding_completed');
     state = const OnboardingState();
   }
 }
 
 final onboardingProvider =
     StateNotifierProvider<OnboardingNotifier, OnboardingState>((ref) {
-      return OnboardingNotifier(GetIt.I<ApiService>());
+      return OnboardingNotifier(
+        getIt<ApiService>(),
+        getIt<SharedPreferences>(),
+      );
     });

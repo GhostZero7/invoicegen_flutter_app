@@ -5,7 +5,8 @@ import 'package:invoicegen_flutter_app/data/datasources/remote/api_service.dart'
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:invoicegen_flutter_app/core/network/graphql_config.dart';
 import 'package:invoicegen_flutter_app/data/repositories/auth_repository.dart';
-import 'package:invoicegen_flutter_app/domain/repositories/auth_repository.dart' as domain_auth;
+import 'package:invoicegen_flutter_app/domain/repositories/auth_repository.dart'
+    as domain_auth;
 import 'package:invoicegen_flutter_app/data/repositories/user_repository.dart';
 import 'package:invoicegen_flutter_app/data/repositories/business_repository.dart';
 import 'package:invoicegen_flutter_app/data/repositories/invoice_repository.dart';
@@ -24,21 +25,36 @@ Future<void> initDependencies() async {
   getIt.registerSingleton<Dio>(Dio());
 
   // GraphQL Client
-  getIt.registerSingleton<GraphQLClient>(GraphQLConfig.getClient());
+  final gqlConfig = GraphQLConfig(sharedPreferences);
+  getIt.registerSingleton<GraphQLClient>(gqlConfig.getClient());
 
   // Services
-  getIt.registerSingleton<ApiService>(ApiService(getIt<SharedPreferences>()));
-  getIt.registerSingleton<ConnectionService>(ConnectionService(getIt<ApiService>()));
+  getIt.registerLazySingleton<ApiService>(
+    () => ApiService(sharedPreferences, getIt<GraphQLClient>()),
+  );
+  getIt.registerLazySingleton<ConnectionService>(
+    () => ConnectionService(getIt<ApiService>()),
+  );
 
   // Repositories - Register implementation with domain interface
-  getIt.registerSingleton<domain_auth.AuthRepository>(
-    AuthRepositoryImpl(getIt<ApiService>()),
+  getIt.registerLazySingleton<domain_auth.AuthRepository>(
+    () => AuthRepositoryImpl(getIt<ApiService>()),
   );
-  getIt.registerSingleton<UserRepository>(UserRepository(getIt<ApiService>()));
-  getIt.registerSingleton<BusinessRepository>(BusinessRepository(getIt<ApiService>()));
-  getIt.registerSingleton<ClientRepository>(ClientRepository(getIt<ApiService>()));
-  getIt.registerSingleton<InvoiceRepository>(InvoiceRepository(getIt<ApiService>()));
-  getIt.registerSingleton<ProductRepository>(ProductRepository(getIt<ApiService>()));
+  getIt.registerLazySingleton<UserRepository>(
+    () => UserRepository(getIt<ApiService>()),
+  );
+  getIt.registerLazySingleton<BusinessRepository>(
+    () => BusinessRepository(getIt<ApiService>()),
+  );
+  getIt.registerLazySingleton<ClientRepository>(
+    () => ClientRepository(getIt<ApiService>()),
+  );
+  getIt.registerLazySingleton<InvoiceRepository>(
+    () => InvoiceRepository(getIt<ApiService>()),
+  );
+  getIt.registerLazySingleton<ProductRepository>(
+    () => ProductRepository(getIt<ApiService>()),
+  );
 
   // BLoCs will be registered here when created
 }

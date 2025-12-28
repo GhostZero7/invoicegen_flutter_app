@@ -70,11 +70,23 @@ class CompletionStep extends ConsumerWidget {
 
           const SizedBox(height: 48),
 
-          // "Get Started" Button
           ElevatedButton(
-                onPressed: () {
-                  onboardingNotifier.completeOnboarding();
-                  // Navigation is handled in main.dart based on this state
+                onPressed: () async {
+                  final success = await onboardingNotifier.register();
+                  if (success) {
+                    onboardingNotifier.completeOnboarding();
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Failed to create account. Please try again.',
+                          ),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                    }
+                  }
                 },
                 style:
                     ElevatedButton.styleFrom(
