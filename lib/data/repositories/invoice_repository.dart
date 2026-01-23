@@ -65,4 +65,12 @@ class InvoiceRepository {
       rethrow;
     }
   }
+
+  Future<List<dynamic>> getInvoicesForClient(String clientId) async {
+    try {
+      return await _apiService.getInvoicesForClient(clientId);
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

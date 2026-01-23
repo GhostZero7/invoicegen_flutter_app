@@ -10,8 +10,8 @@ class AppTheme {
   // Neutral Colors
   static const Color lightBackground = Color(0xFFF8FAFC);
   static const Color lightSurface = Colors.white;
-  static const Color darkBackground = Color(0xFF0F172A);
-  static const Color darkSurface = Color(0xFF1E293B);
+  static const Color darkBackground = Color(0xFF0B101B);
+  static const Color darkSurface = Color(0xFF161C2A);
 
   static ThemeData lightTheme = FlexThemeData.light(
     colors: const FlexSchemeColor(

@@ -10,6 +10,7 @@ class Product extends Equatable {
   final String? sku;
   final String? unit;
   final int? quantity;
+  final double? taxRate;
   final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -24,6 +25,7 @@ class Product extends Equatable {
     this.sku,
     this.unit,
     this.quantity,
+    this.taxRate,
     required this.status,
     required this.createdAt,
     required this.updatedAt,
@@ -42,6 +44,7 @@ class Product extends Equatable {
       quantity: json['quantity'] != null
           ? (json['quantity'] as num).toInt()
           : null,
+      taxRate: (json['tax_rate'] as num?)?.toDouble() ?? 0.0,
       status: json['status']?.toString() ?? 'ACTIVE',
       createdAt: DateTime.parse(
         json['created_at'] ?? DateTime.now().toIso8601String(),
@@ -62,6 +65,7 @@ class Product extends Equatable {
     'sku': sku,
     'unit': unit,
     'quantity': quantity,
+    'tax_rate': taxRate,
     'status': status,
     'created_at': createdAt.toIso8601String(),
     'updated_at': updatedAt.toIso8601String(),
@@ -78,6 +82,7 @@ class Product extends Equatable {
     sku,
     unit,
     quantity,
+    taxRate,
     status,
     createdAt,
     updatedAt,

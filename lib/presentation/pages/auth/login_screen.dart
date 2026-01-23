@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invoicegen_flutter_app/presentation/riverpod/onboarding_provider.dart';
 import 'package:invoicegen_flutter_app/injection_container.dart';
 import 'package:invoicegen_flutter_app/core/network/connection_service.dart';
+import 'package:invoicegen_flutter_app/core/utils/page_transitions.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -68,9 +69,8 @@ class _LoginScreenState extends State<LoginScreen> {
           IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
+              context.showSmoothDialog(
+                dialog: AlertDialog(
                   title: const Text('Backend Info'),
                   content: Text(
                     'Backend URL:\n${getIt<ConnectionService>().testConnection().then((s) => s.baseUrl)}',

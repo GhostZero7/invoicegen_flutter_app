@@ -63,6 +63,18 @@ class InvoiceNotifier extends StateNotifier<InvoiceState> {
       return false;
     }
   }
+
+  Future<void> fetchInvoicesForClient(String clientId) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final invoices = await _repository.getInvoicesForClient(clientId);
+      // Convert the dynamic list to Invoice objects
+      final invoiceList = invoices.map((json) => Invoice.fromJson(json)).toList();
+      state = state.copyWith(invoices: invoiceList, isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
 }
 
 final invoiceProvider = StateNotifierProvider<InvoiceNotifier, InvoiceState>((

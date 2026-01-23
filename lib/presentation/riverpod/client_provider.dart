@@ -54,6 +54,51 @@ class ClientNotifier extends StateNotifier<ClientState> {
       return false;
     }
   }
+
+  Future<bool> updateClient(String clientId, Map<String, dynamic> data) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final updatedClient = await _repository.updateClient(clientId, data);
+      final updatedClients = state.clients.map((client) {
+        return client.id == clientId ? updatedClient : client;
+      }).toList();
+      
+      state = state.copyWith(
+        clients: updatedClients,
+        isLoading: false,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> deleteClient(String clientId) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _repository.deleteClient(clientId);
+      final updatedClients = state.clients.where((client) => client.id != clientId).toList();
+      
+      state = state.copyWith(
+        clients: updatedClients,
+        isLoading: false,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> fetchInvoicesForClient(String clientId) async {
+    try {
+      return await _repository.getInvoicesForClient(clientId);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return [];
+    }
+  }
 }
 
 // Provider

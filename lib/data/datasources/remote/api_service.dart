@@ -395,14 +395,25 @@ class ApiService {
     }
   }
 
-  // ✅ Business methods (stub implementations)
+  // ✅ Business methods (GraphQL)
   Future<List<dynamic>> getBusinessProfiles() async {
     try {
-      final response = await _dio.get('/business');
-      return response.data;
+      final result = await _gqlClient.query(
+        QueryOptions(
+          document: gql(GraphQLQueries.getMyBusinesses),
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+
+      if (result.hasException) {
+        print('❌ GraphQL Error (getBusinessProfiles): ${result.exception}');
+        throw Exception(result.exception.toString());
+      }
+
+      return result.data?['myBusinesses'] ?? [];
     } catch (e) {
-      print('❌ getBusinessProfiles error: $e');
-      throw Exception('Business profiles endpoint not implemented');
+      print('❌ getBusinessProfiles (GraphQL) error: $e');
+      rethrow;
     }
   }
 
@@ -410,11 +421,94 @@ class ApiService {
     Map<String, dynamic> data,
   ) async {
     try {
-      final response = await _dio.post('/business', data: data);
-      return response.data;
+      final result = await _gqlClient.mutate(
+        MutationOptions(
+          document: gql(GraphQLQueries.createBusiness),
+          variables: {'input': data},
+        ),
+      );
+
+      if (result.hasException) {
+        print('❌ GraphQL Error (createBusinessProfile): ${result.exception}');
+        throw Exception(result.exception.toString());
+      }
+
+      return result.data?['createBusiness'] ?? {};
     } catch (e) {
-      print('❌ createBusinessProfile error: $e');
-      throw Exception('Create business profile endpoint not implemented');
+      print('❌ createBusinessProfile (GraphQL) error: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> updateBusinessProfile(
+    String businessId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final result = await _gqlClient.mutate(
+        MutationOptions(
+          document: gql(GraphQLQueries.updateBusiness),
+          variables: {
+            'id': businessId,
+            'input': data,
+          },
+        ),
+      );
+
+      if (result.hasException) {
+        print('❌ GraphQL Error (updateBusinessProfile): ${result.exception}');
+        throw Exception(result.exception.toString());
+      }
+
+      return result.data?['updateBusiness'] ?? {};
+    } catch (e) {
+      print('❌ updateBusinessProfile (GraphQL) error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteBusinessProfile(String businessId) async {
+    try {
+      final result = await _gqlClient.mutate(
+        MutationOptions(
+          document: gql(GraphQLQueries.deleteBusiness),
+          variables: {'id': businessId},
+        ),
+      );
+
+      if (result.hasException) {
+        print('❌ GraphQL Error (deleteBusinessProfile): ${result.exception}');
+        throw Exception(result.exception.toString());
+      }
+    } catch (e) {
+      print('❌ deleteBusinessProfile (GraphQL) error: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getBusinessProfile(String businessId) async {
+    try {
+      final result = await _gqlClient.query(
+        QueryOptions(
+          document: gql(GraphQLQueries.getBusiness),
+          variables: {'id': businessId},
+        ),
+      );
+
+      if (result.hasException) {
+        print('❌ GraphQL Error (getBusinessProfile): ${result.exception}');
+        throw Exception(result.exception.toString());
+      }
+
+      final business = result.data?['business'];
+      if (business == null) {
+        throw Exception('Business profile not found');
+      }
+
+      return business;
+    } catch (e) {
+      print('❌ getBusinessProfile (GraphQL) error: $e');
+      rethrow;
     }
   }
 
@@ -455,6 +549,67 @@ class ApiService {
       return result.data?['createClient'] ?? {};
     } catch (e) {
       print('❌ createClient (GraphQL) error: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> updateClient(String clientId, Map<String, dynamic> data) async {
+    try {
+      final result = await _gqlClient.mutate(
+        MutationOptions(
+          document: gql(GraphQLQueries.updateClient),
+          variables: {
+            'id': clientId,
+            'input': data,
+          },
+        ),
+      );
+
+      if (result.hasException) {
+        throw Exception(result.exception.toString());
+      }
+
+      return result.data?['updateClient'] ?? {};
+    } catch (e) {
+      print('❌ updateClient (GraphQL) error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteClient(String clientId) async {
+    try {
+      final result = await _gqlClient.mutate(
+        MutationOptions(
+          document: gql(GraphQLQueries.deleteClient),
+          variables: {'id': clientId},
+        ),
+      );
+
+      if (result.hasException) {
+        throw Exception(result.exception.toString());
+      }
+    } catch (e) {
+      print('❌ deleteClient (GraphQL) error: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getInvoicesForClient(String clientId) async {
+    try {
+      final result = await _gqlClient.query(
+        QueryOptions(
+          document: gql(GraphQLQueries.getInvoicesForClient),
+          variables: {'clientId': clientId},
+        ),
+      );
+
+      if (result.hasException) {
+        throw Exception(result.exception.toString());
+      }
+
+      return result.data?['invoices'] ?? [];
+    } catch (e) {
+      print('❌ getInvoicesForClient (GraphQL) error: $e');
       rethrow;
     }
   }

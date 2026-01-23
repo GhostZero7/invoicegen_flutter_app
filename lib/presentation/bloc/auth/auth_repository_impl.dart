@@ -93,4 +93,14 @@ class AuthRepositoryImpl implements AuthRepository {
       return false;
     }
   }
+
+  @override
+  Future<void> requestVerification(String email) async {
+    await _apiService.requestVerification(email);
+  }
+
+  @override
+  Future<void> verifyEmail(String email, String otp) async {
+    await _apiService.verifyEmail(email, otp);
+  }
 }

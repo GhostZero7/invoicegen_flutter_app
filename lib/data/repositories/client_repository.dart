@@ -25,4 +25,29 @@ class ClientRepository {
       rethrow;
     }
   }
+
+  Future<Client> updateClient(String clientId, Map<String, dynamic> data) async {
+    try {
+      final result = await _apiService.updateClient(clientId, data);
+      return Client.fromJson(result);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteClient(String clientId) async {
+    try {
+      await _apiService.deleteClient(clientId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getInvoicesForClient(String clientId) async {
+    try {
+      return await _apiService.getInvoicesForClient(clientId);
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
