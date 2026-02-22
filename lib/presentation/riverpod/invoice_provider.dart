@@ -75,6 +75,55 @@ class InvoiceNotifier extends StateNotifier<InvoiceState> {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
+
+  // Invoice Actions
+  Future<bool> sendInvoice(String invoiceId) async {
+    try {
+      final success = await _repository.sendInvoice(invoiceId);
+      if (success) {
+        await fetchInvoices(); // Refresh list
+      }
+      return success;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> markInvoiceAsPaid(String invoiceId) async {
+    try {
+      final success = await _repository.markInvoiceAsPaid(invoiceId);
+      if (success) {
+        await fetchInvoices(); // Refresh list
+      }
+      return success;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> cancelInvoice(String invoiceId) async {
+    try {
+      final success = await _repository.cancelInvoice(invoiceId);
+      if (success) {
+        await fetchInvoices(); // Refresh list
+      }
+      return success;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> getInvoiceItems(String invoiceId) async {
+    try {
+      return await _repository.getInvoiceItems(invoiceId);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return [];
+    }
+  }
 }
 
 final invoiceProvider = StateNotifierProvider<InvoiceNotifier, InvoiceState>((

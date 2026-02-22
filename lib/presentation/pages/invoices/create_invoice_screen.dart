@@ -962,69 +962,167 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   }
 
   void _selectClient(BuildContext context, WidgetRef ref) async {
+    final searchController = TextEditingController();
+    
     final selected = await context.showSmoothModalBottomSheet<Client>(
       isScrollControlled: true,
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      isDismissible: true,
+      enableDrag: true,
+      child: StatefulBuilder(
+        builder: (context, setModalState) {
+          final clientState = ref.watch(clientProvider);
+          
+          // Filter clients based on search query
+          final filteredClients = clientState.clients.where((client) {
+            final query = searchController.text.toLowerCase();
+            if (query.isEmpty) return true;
+            
+            final nameMatch = client.clientName.toLowerCase().contains(query);
+            final emailMatch = client.email?.toLowerCase().contains(query) ?? false;
+            
+            return nameMatch || emailMatch;
+          }).toList();
+          
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
             ),
-            const Padding(
-              padding: EdgeInsets.all(20.0),
-              child: Text(
-                'Select Client',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Expanded(
-              child: Consumer(
-                builder: (context, ref, _) {
-                  final state = ref.watch(clientProvider);
-                  if (state.isLoading)
-                    return const Center(child: CircularProgressIndicator());
-                  return ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: state.clients.length,
-                    separatorBuilder: (_, __) => const Divider(),
-                    itemBuilder: (context, index) {
-                      final client = state.clients[index];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.blue.shade50,
-                          child: Text(
-                            client.clientName[0].toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.blue,
-                              fontWeight: FontWeight.bold,
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Text(
+                    'Select Client',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                // Add "Create New Client" button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final newClient = await _showClientCreationDialog(context, ref);
+                        if (newClient != null && context.mounted) {
+                          Navigator.pop(context, newClient);
+                        }
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Create New Client'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Search field
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search by name or email...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                searchController.clear();
+                                setModalState(() {});
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onChanged: (value) => setModalState(() {}),
+                  ),
+                ),
+                const Divider(),
+                Expanded(
+                  child: clientState.isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : filteredClients.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    searchController.text.isEmpty
+                                        ? 'No clients found'
+                                        : 'No clients match "${searchController.text}"',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextButton.icon(
+                                    onPressed: () async {
+                                      final newClient = await _showClientCreationDialog(context, ref);
+                                      if (newClient != null && context.mounted) {
+                                        Navigator.pop(context, newClient);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Create New Client'),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: filteredClients.length,
+                              separatorBuilder: (_, __) => const Divider(),
+                              itemBuilder: (context, index) {
+                                final client = filteredClients[index];
+                                return ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: Colors.blue.shade50,
+                                    child: Text(
+                                      client.clientName[0].toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.blue,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    client.clientName,
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                  subtitle: Text(client.email ?? ''),
+                                  onTap: () => Navigator.pop(context, client),
+                                );
+                              },
                             ),
-                          ),
-                        ),
-                        title: Text(
-                          client.clientName,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(client.email ?? ''),
-                        onTap: () => Navigator.pop(context, client),
-                      );
-                    },
-                  );
-                },
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
 
@@ -1032,19 +1130,21 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
   }
 
   void _addItem(BuildContext context, WidgetRef ref) async {
+    // Create controllers outside StatefulBuilder so they persist across rebuilds
+    final descController = TextEditingController();
+    final qtyController = TextEditingController(text: '1');
+    final priceController = TextEditingController(text: '0.0');
+    final taxController = TextEditingController(text: '0.0');
+    String uom = 'unit';
+    String? pid;
+
     final result = await context.showSmoothModalBottomSheet<Map<String, dynamic>>(
       isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
       child: StatefulBuilder(
         builder: (context, setDialogState) {
           final pState = ref.watch(productProvider);
-
-          // Internal state for the dialog
-          final descController = TextEditingController();
-          final qtyController = TextEditingController(text: '1');
-          final priceController = TextEditingController(text: '0.0');
-          final taxController = TextEditingController(text: '0.0');
-          String uom = 'unit';
-          String? pid;
 
           return Container(
             padding: EdgeInsets.only(
@@ -1060,11 +1160,52 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Add drag handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
                   const Text(
                     'Add Line Item',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 20),
+                  // Add "Create New Product" button
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final newProduct = await _showProductCreationDialog(context, ref);
+                        if (newProduct != null) {
+                          setDialogState(() {
+                            pid = newProduct.id;
+                            descController.text = newProduct.productName;
+                            priceController.text = newProduct.price.toString();
+                            taxController.text = (newProduct.taxRate ?? 0).toString();
+                            uom = newProduct.unit ?? 'unit';
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Create New Product'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 16),
                   DropdownButtonFormField<Product>(
                     decoration: const InputDecoration(
                       labelText: 'Select from Products (Optional)',
@@ -1224,6 +1365,15 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
 
     if (result != null) {
       setState(() => _items.add(result));
+      // Show confirmation message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Item "${result['description']}" added to invoice'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -1256,6 +1406,393 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
     }
   }
 
+  Future<Client?> _showClientCreationDialog(BuildContext context, WidgetRef ref) async {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final phoneController = TextEditingController();
+    final addressController = TextEditingController();
+    bool isLoading = false;
+
+    return await showDialog<Client?>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              'Create New Client',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Client Name *',
+                        prefixIcon: const Icon(Icons.person_outline),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Client name is required';
+                        }
+                        return null;
+                      },
+                      autofocus: true,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: emailController,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value != null && value.isNotEmpty) {
+                          final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                          if (!emailRegex.hasMatch(value)) {
+                            return 'Please enter a valid email address';
+                          }
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: phoneController,
+                      decoration: InputDecoration(
+                        labelText: 'Phone',
+                        prefixIcon: const Icon(Icons.phone_outlined),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: addressController,
+                      decoration: InputDecoration(
+                        labelText: 'Address',
+                        prefixIcon: const Icon(Icons.location_on_outlined),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      maxLines: 2,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isLoading ? null : () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+
+                        final business = ref.read(businessProvider).selectedBusiness;
+                        if (business == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Business context is required. Please select a business first.'),
+                            ),
+                          );
+                          return;
+                        }
+
+                        setDialogState(() => isLoading = true);
+
+                        final clientData = {
+                          'business_id': business.id,
+                          'company_name': nameController.text.trim(),
+                          'email': emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+                          'phone': phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+                          'notes': addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+                          'status': 'ACTIVE',
+                        };
+
+                        final success = await ref.read(clientProvider.notifier).createClient(clientData);
+
+                        if (context.mounted) {
+                          setDialogState(() => isLoading = false);
+
+                          if (success) {
+                            // Get the newly created client (last in the list)
+                            final newClient = ref.read(clientProvider).clients.last;
+                            
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Client created successfully!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            Navigator.pop(context, newClient);
+                          } else {
+                            final error = ref.read(clientProvider).error ?? 'Failed to create client';
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(error),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Create Client'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<Product?> _showProductCreationDialog(BuildContext context, WidgetRef ref) async {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final priceController = TextEditingController();
+    final taxRateController = TextEditingController(text: '0');
+    final unitController = TextEditingController(text: 'unit');
+    bool isLoading = false;
+
+    return await showDialog<Product?>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              'Create New Product',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Product Name *',
+                        prefixIcon: const Icon(Icons.inventory_2_outlined),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Product name is required';
+                        }
+                        return null;
+                      },
+                      autofocus: true,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(
+                        labelText: 'Description',
+                        prefixIcon: const Icon(Icons.description_outlined),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: priceController,
+                      decoration: InputDecoration(
+                        labelText: 'Price *',
+                        prefixIcon: const Icon(Icons.attach_money),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Price is required';
+                        }
+                        final price = double.tryParse(value);
+                        if (price == null || price <= 0) {
+                          return 'Price must be a positive number';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: taxRateController,
+                            decoration: InputDecoration(
+                              labelText: 'Tax Rate %',
+                              suffixText: '%',
+                              filled: true,
+                              fillColor: Colors.grey[50],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                final taxRate = double.tryParse(value);
+                                if (taxRate == null || taxRate < 0 || taxRate > 100) {
+                                  return 'Tax rate must be between 0 and 100';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: unitController,
+                            decoration: InputDecoration(
+                              labelText: 'Unit',
+                              hintText: 'Box, Hr, Pc',
+                              filled: true,
+                              fillColor: Colors.grey[50],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isLoading ? null : () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+
+                        final business = ref.read(businessProvider).selectedBusiness;
+                        if (business == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Business context is required. Please select a business first.'),
+                            ),
+                          );
+                          return;
+                        }
+
+                        setDialogState(() => isLoading = true);
+
+                        final productData = {
+                          'business_id': business.id,
+                          'name': nameController.text.trim(),
+                          'description': descriptionController.text.trim().isEmpty ? null : descriptionController.text.trim(),
+                          'unitPrice': double.parse(priceController.text.trim()),
+                          'taxRate': taxRateController.text.trim().isEmpty ? 0.0 : double.parse(taxRateController.text.trim()),
+                          'unitOfMeasure': unitController.text.trim().isEmpty ? 'unit' : unitController.text.trim(),
+                          'isActive': true,
+                        };
+
+                        final success = await ref.read(productProvider.notifier).createProduct(productData);
+
+                        if (context.mounted) {
+                          setDialogState(() => isLoading = false);
+
+                          if (success) {
+                            // Get the newly created product (last in the list)
+                            final newProduct = ref.read(productProvider).products.last;
+                            
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Product created successfully!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            Navigator.pop(context, newProduct);
+                          } else {
+                            final error = ref.read(productProvider).error ?? 'Failed to create product';
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(error),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Create Product'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _saveInvoice() async {
     final business = ref.read(businessProvider).selectedBusiness;
     if (business == null) {
@@ -1279,18 +1816,32 @@ class _CreateInvoiceScreenState extends ConsumerState<CreateInvoiceScreen> {
 
     setState(() => _isSaving = true);
 
+    // Convert items to camelCase format for GraphQL
+    final formattedItems = _items.map((item) {
+      return {
+        'productId': item['product_id'],
+        'description': item['description'],
+        'quantity': item['quantity'],
+        'unitPrice': item['unit_price'],
+        'unitOfMeasure': item['unit_of_measure'],
+        'taxRate': item['tax_rate'],
+        'discountType': (item['discount_type'] as String).toUpperCase(),
+        'discountValue': item['discount_value'],
+      };
+    }).toList();
+
     final data = {
-      'business_id': business.id,
-      'client_id': _selectedClient!.id,
-      'invoice_date': DateFormat('yyyy-MM-dd').format(_invoiceDate),
-      'due_date': DateFormat('yyyy-MM-dd').format(_dueDate),
-      'payment_terms': 'net_30',
-      'discount_type': _discountType,
-      'discount_value': double.tryParse(_discountController.text) ?? 0,
-      'shipping_amount': double.tryParse(_shippingController.text) ?? 0,
+      'businessId': business.id,
+      'clientId': _selectedClient!.id,
+      'invoiceDate': DateFormat('yyyy-MM-dd').format(_invoiceDate),
+      'dueDate': DateFormat('yyyy-MM-dd').format(_dueDate),
+      'paymentTerms': 'NET_30',
+      'discountType': _discountType.toUpperCase(),
+      'discountValue': double.tryParse(_discountController.text) ?? 0,
+      'shippingAmount': double.tryParse(_shippingController.text) ?? 0,
       'notes': _notesController.text,
-      'payment_instructions': _paymentInstructionsController.text,
-      'items': _items,
+      'paymentInstructions': _paymentInstructionsController.text,
+      'items': formattedItems,
     };
 
     final success = await ref

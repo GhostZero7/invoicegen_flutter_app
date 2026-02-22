@@ -1,10 +1,16 @@
 import 'package:invoicegen_flutter_app/data/datasources/remote/api_service.dart';
+import 'package:invoicegen_flutter_app/data/datasources/remote/api_service_extensions.dart';
 import 'package:invoicegen_flutter_app/data/models/invoice.dart';
+import 'package:get_it/get_it.dart';
+import 'package:graphql_flutter/graphql_flutter.dart';
 
 class InvoiceRepository {
   final ApiService _apiService;
+  late final ApiServiceExtensions _extensions;
 
-  InvoiceRepository(this._apiService);
+  InvoiceRepository(this._apiService) {
+    _extensions = ApiServiceExtensions(GetIt.I<GraphQLClient>());
+  }
 
   Future<List<Invoice>> getInvoices({
     String? status,
@@ -69,6 +75,39 @@ class InvoiceRepository {
   Future<List<dynamic>> getInvoicesForClient(String clientId) async {
     try {
       return await _apiService.getInvoicesForClient(clientId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Invoice Actions
+  Future<List<dynamic>> getInvoiceItems(String invoiceId) async {
+    try {
+      return await _extensions.getInvoiceItems(invoiceId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> sendInvoice(String invoiceId) async {
+    try {
+      return await _extensions.sendInvoice(invoiceId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> markInvoiceAsPaid(String invoiceId) async {
+    try {
+      return await _extensions.markInvoiceAsPaid(invoiceId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> cancelInvoice(String invoiceId) async {
+    try {
+      return await _extensions.cancelInvoice(invoiceId);
     } catch (e) {
       rethrow;
     }

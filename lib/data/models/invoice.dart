@@ -11,6 +11,8 @@ class Invoice extends Equatable {
   final double taxAmount;
   final double discountAmount;
   final double totalAmount;
+  final double amountPaid;
+  final double amountDue;
   final String currency;
   final String status;
   final String? notes;
@@ -29,6 +31,8 @@ class Invoice extends Equatable {
     required this.taxAmount,
     required this.discountAmount,
     required this.totalAmount,
+    required this.amountPaid,
+    required this.amountDue,
     required this.currency,
     required this.status,
     this.notes,
@@ -53,6 +57,8 @@ class Invoice extends Equatable {
       taxAmount: (json['tax_amount'] as num?)?.toDouble() ?? 0.0,
       discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0.0,
       totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0.0,
+      amountPaid: (json['amount_paid'] as num?)?.toDouble() ?? 0.0,
+      amountDue: (json['amount_due'] as num?)?.toDouble() ?? (json['total_amount'] as num?)?.toDouble() ?? 0.0,
       currency: json['currency'] ?? 'USD',
       status: json['status'] ?? 'DRAFT',
       notes: json['notes'],
@@ -77,6 +83,8 @@ class Invoice extends Equatable {
     'tax_amount': taxAmount,
     'discount_amount': discountAmount,
     'total_amount': totalAmount,
+    'amount_paid': amountPaid,
+    'amount_due': amountDue,
     'currency': currency,
     'status': status,
     'notes': notes,
@@ -97,6 +105,8 @@ class Invoice extends Equatable {
     taxAmount,
     discountAmount,
     totalAmount,
+    amountPaid,
+    amountDue,
     currency,
     status,
     notes,

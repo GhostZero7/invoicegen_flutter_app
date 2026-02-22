@@ -3,8 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:invoicegen_flutter_app/data/models/invoice.dart';
 import 'package:invoicegen_flutter_app/data/models/invoice_item.dart';
+import 'package:invoicegen_flutter_app/data/models/payment.dart';
 import 'package:invoicegen_flutter_app/presentation/riverpod/business_provider.dart';
 import 'package:invoicegen_flutter_app/presentation/riverpod/client_provider.dart';
+import 'package:invoicegen_flutter_app/presentation/riverpod/invoice_provider.dart';
+import 'package:invoicegen_flutter_app/presentation/riverpod/payment_provider.dart';
+import 'package:invoicegen_flutter_app/presentation/pages/payments/record_payment_screen.dart';
 import 'package:invoicegen_flutter_app/core/services/pdf_service.dart';
 import 'package:invoicegen_flutter_app/data/repositories/invoice_repository.dart';
 import 'package:invoicegen_flutter_app/data/models/client.dart';
@@ -25,29 +29,42 @@ class InvoiceDetailsScreen extends ConsumerStatefulWidget {
 
 class _InvoiceDetailsScreenState extends ConsumerState<InvoiceDetailsScreen> {
   List<InvoiceItem> _items = [];
+  List<Payment> _payments = [];
   bool _isLoadingItems = true;
 
   @override
   void initState() {
     super.initState();
     _loadInvoiceItems();
+    _loadPayments();
   }
 
   Future<void> _loadInvoiceItems() async {
     try {
-      final invoiceRepo = GetIt.I<InvoiceRepository>();
-      final fullInvoice = await invoiceRepo.getInvoiceDetails(widget.invoice.id);
+      final items = await ref.read(invoiceProvider.notifier).getInvoiceItems(widget.invoice.id);
       
-      // Extract items from response if available
-      // This assumes the backend returns items in the invoice details
       setState(() {
-        _items = []; // TODO: Parse items from fullInvoice response
+        _items = items.map((json) => InvoiceItem.fromJson(json)).toList();
         _isLoadingItems = false;
       });
     } catch (e) {
+      print('Error loading invoice items: $e');
       setState(() {
         _isLoadingItems = false;
       });
+    }
+  }
+
+  Future<void> _loadPayments() async {
+    try {
+      await ref.read(paymentProvider.notifier).fetchPayments(invoiceId: widget.invoice.id);
+      final paymentState = ref.read(paymentProvider);
+      
+      setState(() {
+        _payments = paymentState.payments;
+      });
+    } catch (e) {
+      print('Error loading payments: $e');
     }
   }
 
@@ -147,6 +164,14 @@ class _InvoiceDetailsScreenState extends ConsumerState<InvoiceDetailsScreen> {
                   const SizedBox(height: 12),
                   _buildPaymentSummaryCard(isDark, currencyFormat),
                   const SizedBox(height: 24),
+
+                  // Payment History
+                  if (_payments.isNotEmpty) ...[
+                    _buildSectionHeader('PAYMENT HISTORY', isDark),
+                    const SizedBox(height: 12),
+                    _buildPaymentHistoryCard(isDark, currencyFormat),
+                    const SizedBox(height: 24),
+                  ],
 
                   // Notes
                   if (widget.invoice.notes != null && widget.invoice.notes!.isNotEmpty) ...[
@@ -837,38 +862,65 @@ class _InvoiceDetailsScreenState extends ConsumerState<InvoiceDetailsScreen> {
   }
 
   Widget _buildActionButtons(bool isDark) {
-    return Row(
+    // Only show "Record Payment" if invoice is not fully paid
+    final canRecordPayment = widget.invoice.status.toLowerCase() != 'paid' && 
+                             widget.invoice.amountDue > 0;
+
+    return Column(
       children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () => _markAsPaid(context),
-            icon: const Icon(Icons.check_circle_outline),
-            label: const Text('Mark as Paid'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        if (canRecordPayment) ...[
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _recordPayment(context),
+              icon: const Icon(Icons.payment),
+              label: const Text('Record Payment'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => _sendReminder(context),
-            icon: const Icon(Icons.send_outlined),
-            label: const Text('Send Reminder'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.blue,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: const BorderSide(color: Colors.blue),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          const SizedBox(height: 12),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _markAsPaid(context),
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('Mark as Paid'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _sendReminder(context),
+                icon: const Icon(Icons.send_outlined),
+                label: const Text('Send Invoice'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: const BorderSide(color: Colors.blue),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -884,6 +936,107 @@ class _InvoiceDetailsScreenState extends ConsumerState<InvoiceDetailsScreen> {
         letterSpacing: 1,
       ),
     );
+  }
+
+  Widget _buildPaymentHistoryCard(bool isDark, NumberFormat currencyFormat) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1F3A) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: _payments.map((payment) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        payment.paymentNumber,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${DateFormat('MMM dd, yyyy').format(payment.paymentDate)} • ${PaymentMethod.fromString(payment.paymentMethod).displayName}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  currencyFormat.format(payment.amount),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  void _recordPayment(BuildContext context) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RecordPaymentScreen(invoice: widget.invoice),
+      ),
+    );
+
+    if (result == true && mounted) {
+      // Reload payments and invoice data
+      await _loadPayments();
+      // Refresh invoice list
+      ref.read(invoiceProvider.notifier).fetchInvoices();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment recorded and invoice updated'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   Future<void> _generatePdf(BuildContext context) async {
@@ -956,15 +1109,135 @@ class _InvoiceDetailsScreenState extends ConsumerState<InvoiceDetailsScreen> {
     );
   }
 
-  void _markAsPaid(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Mark as paid functionality coming soon')),
+  void _markAsPaid(BuildContext context) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mark as Paid'),
+        content: const Text('Are you sure you want to mark this invoice as paid?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text('Mark as Paid'),
+          ),
+        ],
+      ),
     );
+
+    if (confirmed == true && context.mounted) {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      try {
+        final success = await ref.read(invoiceProvider.notifier).markInvoiceAsPaid(widget.invoice.id);
+        
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading
+          
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Invoice marked as paid successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.pop(context); // Go back to list
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to mark invoice as paid'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
-  void _sendReminder(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Send reminder functionality coming soon')),
+  void _sendReminder(BuildContext context) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Send Invoice'),
+        content: const Text('Send this invoice to the client?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Send'),
+          ),
+        ],
+      ),
     );
+
+    if (confirmed == true && context.mounted) {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      try {
+        final success = await ref.read(invoiceProvider.notifier).sendInvoice(widget.invoice.id);
+        
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading
+          
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Invoice sent successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to send invoice'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context); // Close loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 }

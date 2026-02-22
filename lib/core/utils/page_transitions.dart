@@ -309,6 +309,7 @@ extension ContextNavigationExtensions on BuildContext {
     return showGeneralDialog<T>(
       context: this,
       barrierDismissible: isDismissible,
+      barrierLabel: isDismissible ? MaterialLocalizations.of(this).modalBarrierDismissLabel : null,
       barrierColor: Colors.black54,
       transitionDuration: duration,
       transitionBuilder: (context, animation, secondaryAnimation, child) {

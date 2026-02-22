@@ -36,11 +36,22 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
 
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
+      final clientState = ref.read(clientProvider);
       filtered = filtered.where((invoice) {
         final query = _searchQuery.toLowerCase();
-        return invoice.invoiceNumber.toLowerCase().contains(query) ||
-               invoice.clientId.toLowerCase().contains(query) ||
+        
+        // Search by invoice number and amount
+        final invoiceMatch = invoice.invoiceNumber.toLowerCase().contains(query) ||
                invoice.totalAmount.toString().contains(query);
+        
+        // Search by client name and email
+        final client = clientState.clients.where((c) => c.id == invoice.clientId).firstOrNull;
+        final clientMatch = client != null && (
+          client.clientName.toLowerCase().contains(query) ||
+          (client.email?.toLowerCase().contains(query) ?? false)
+        );
+        
+        return invoiceMatch || clientMatch;
       }).toList();
     }
 
@@ -120,7 +131,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                             color: isDark ? Colors.white : Colors.black87,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Search invoices...',
+                            hintText: 'Search by invoice #, client name, email...',
                             hintStyle: TextStyle(
                               color: isDark ? Colors.grey[400] : Colors.grey[600],
                             ),
@@ -499,6 +510,11 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
   }
 
   Widget _buildInvoiceCard(BuildContext context, dynamic invoice, ThemeData theme, bool isDark) {
+    // Get client name
+    final clientState = ref.read(clientProvider);
+    final client = clientState.clients.where((c) => c.id == invoice.clientId).firstOrNull;
+    final clientName = client?.clientName ?? 'Unknown Client';
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -543,12 +559,25 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          'Client ID: ${invoice.clientId}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Colors.grey[400] : Colors.grey[600],
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.person_outline,
+                              size: 14,
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                clientName,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
